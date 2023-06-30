@@ -1,45 +1,39 @@
+require('dotenv').config()
+
 const express = require('express');
 const app = express();
-const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken')
 
 app.use(express.json());
 
-const users = [];
+const posts = [
+    {
+        username: "Saikat",
+        title: "FullStack Engineer"
+    },
+    {
+        username: "Shanks",
+        title: "FE Engineer"
+    }
+]
 
-app.get('/users', (req, res) => {
-    res.json(users);
+app.get('/posts', authenticateToken, (req, res) => {
+    res.json(posts.filter(post => post.username === req.user.name));
 });
 
-app.post('/users', async (req, res) => {
-    try {
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const user = { name: req.body.name, password: hashedPassword }
 
-        users.push(user);
-        res.status(201).send();
-    }
-    catch {
-        res.status(500).send();
-    }
-});
-
-app.post('/users/login', async (req, res) => {
-    const user = users.find(user => user.name === req.body.name);
-    if (user === null) {
-        return res.status(400).send('Cannot find user');
-    }
-    try {
-       if(await bcrypt.compare(req.body.password, user.password)) {
-            res.send('Success');
-       }
-       else {
-            res.send('Oops!! something is not correct');
-       }
-    }
-    catch {
-        res.status(500).send()
-    }
-});
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token == null) return res.sendStatus(401);
+  
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, user) => {
+      if (err) return res.sendStatus(403);
+      console.log(user);
+      req.user = user;
+      next();
+    })
+}
 
 app.listen(5000, () => {
     console.log('Listening on port 5000');
