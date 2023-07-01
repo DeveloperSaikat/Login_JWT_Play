@@ -4,11 +4,18 @@ const express = require('express');
 const app = express();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');
+
+const users = require('./models/user');
 
 app.use(express.json());
 
 let refreshTokens = [];
-const users = [];
+
+const MongoDBUri = 'mongodb+srv://saikatdevworks:cJQjt0HhOoxexSf6@test-cluster.kfa5qnw.mongodb.net/users?w=majority'
+mongoose.connect(MongoDBUri, {
+    useNewUrlParser: true, useUnifiedTopology: true
+})
 
 app.get('/user/all', (req, res) => {//This is not practical, but kept this for testing
     res.json(users);
@@ -35,16 +42,16 @@ app.post('/user/create', async (req, res) => {
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         const user = { name: req.body.name, password: hashedPassword };
 
-        users.push(user);
-        res.status(201).send();
+        await users.create(user);
+        res.status(201).send('User created');
     }
     catch {
-        res.status(500).send();
+        res.status(500).send('Some internal error');
     }
 });
 
 app.post('/user/login', async (req, res) => {
-    const userEntity = users.find(user => user.name === req.body.name);
+    const userEntity = await users.findOne({ name: req.body.name});
     if (!userEntity) {
         return res.status(400).send('Cannot find user');
     }
